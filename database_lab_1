@@ -1,6 +1,7 @@
 ANSWERS LAB 1:
 Selection, projection, and restriction:
 
+
 -- 1. Show all customers with all their information.
 -- SELECT * FROM customers;
 -- 2. Show all customers, but only with their name and birthdate
@@ -48,7 +49,7 @@ Selection, projection, and restriction:
 -- WHERE customer_name LIKE 'O%';
 
 
-Aggregated Functions
+---------- Aggregated Functions  ----------
 
 -- 1. Show the average price per day for the cars.
 -- SELECT AVG(price_per_day) FROM cars;
@@ -85,7 +86,7 @@ Aggregated Functions
 -- ORDER BY price_per_day DESC
 -- LIMIT 1;
 
-JOINS
+---------- JOINS  ----------
 
 -- 1. Show the Cartesian product between Cars and Bookings.
 -- SELECT *
@@ -161,7 +162,7 @@ JOINS
 -- ON c.car_number = b.car_number
 -- WHERE color = 'black';
 
-NESTED QUERIES
+---------- NESTED QUERIES  ----------
 
 -- 1. Show all the cars that cost more than the average.
 -- SELECT *
@@ -181,3 +182,159 @@ NESTED QUERIES
 -- FROM bookings
 -- WHERE car_number IN (SELECT car_number FROM cars WHERE color = 'black'); -- Inner query, get's all car numbers. (5,8,12)
 
+---------- IN  ---------- 
+
+-- 1. Show all cars that has the cost 700, 800, and 850.
+-- SELECT *
+-- FROM cars
+-- WHERE price_per_day IN (700, 800, 850);
+-- 2. Show all the customers that were born in 1990, 1995, and 2000
+-- SELECT *
+-- FROM customers
+-- WHERE YEAR(birthdate) IN (1990,1995,2000);
+-- 3. Show all the bookings that start on 2018-01-03, 2018-02-22, or 2018-03-18.
+-- SELECT *
+-- FROM bookings
+-- WHERE start_date IN ('2018-01-03','2018-02-22','2018-03-18');
+
+---------- BETWEEN -----------
+
+-- 1. Show all cars whose price is in the range 600 - 1000.
+-- SELECT *
+-- from cars
+-- WHERE price_per_day BETWEEN 600 AND 1000;
+-- 2. Show all the customers who are born between 1960 - 1980.
+-- SELECT *
+-- FROM customers
+-- WHERE YEAR(birthdate) BETWEEN 1960 AND 1980;
+-- 3. Show all bookings that last betwene 2 - 4 days.alter
+-- SELECT *
+-- FROM bookings
+-- WHERE (DAY(end_date) - DAY(start_date)) BETWEEN 2 AND 4;
+
+-------- A MIX OF EVERYTHING ----------
+
+-- 1. Show all the cars that are eligible for booking between 2018-01-10 - 2018-01-20.
+-- SELECT
+-- 	c.car_number,
+--     c.brand,
+--     c.model,
+--     c.color,
+--     c.price_per_day,
+--     b.start_date,
+--     b.end_date
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number
+-- WHERE (b.start_date NOT BETWEEN '2018-01-10' AND '2018-01-20') AND (b.end_date NOT BETWEEN '2018-01-11' AND '2018-01-20');
+-- 2. Show the car that has been booked the most
+-- SELECT
+-- 	c.car_number,
+--     c.brand,
+--     c.model,
+--     c.color,
+--     c.price_per_day,
+--     COUNT(b.car_number) count
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number
+-- GROUP BY c.car_number
+-- ORDER BY count DESC LIMIT 1
+-- 3. Show all the customers who are born in January or February that has booked at least one car
+-- SELECT *
+-- FROM customers c
+-- JOIN bookings b
+-- ON c.customer_number = b.customer_number
+-- WHERE MONTH(c.birthdate) IN (1,2);
+
+---------- DELETE, UPDATE, ALTER & INSERT -------------
+-- 1. There is a customer born in 1800 according to the records, this is obviously not possible so delete that customer.
+-- DELETE FROM customers
+-- WHERE YEAR(birthdate) = 1800;
+-- 2. The Tesla X car that is available for renting needs to have its price increased by 200:-.
+-- UPDATE cars
+-- SET price_per_day = price_per_day + 200
+-- WHERE brand = 'TESLA' and model = 'X';
+-- 3. All the peugeot cars also needs to be increased in price, in this case by 20%
+-- UPDATE cars
+-- SET price_per_day = price_per_day * 1.2
+-- WHERE brand = 'Peugeot';
+-- 4. Now we fast forward into the future and Sweden has changed its currency to Euros (€). Fix both the data itself (assume the conversion rate is 10SEK == 1 EUR) and the table so it can handle the new prices.
+-- UPDATE cars
+-- SET price_per_day = price_per_day * 0.1; -- IDK what they mean about the table but I assume they mean we should make it float instead of int.
+-- ALTER TABLE cars MODIFY price_per_day float(5) NOT NULL;
+-- 5. Can we construct a PK in the Bookings table without adding a new column? If yes, do that. If not, add another column that allows you to uniquely identify each booking.
+-- I have already done that in the beginning. Otherwise I'd do this:
+-- ALTER TABLE bookings
+-- DROP PRIMARY KEY, ADD PRIMARY KEY (customer_number, car_number,start_date);
+
+----------- VIEW ----------------
+
+-- 1. Create a view, that shows all the information about black cars.
+-- CREATE VIEW black_cars AS
+-- SELECT *
+-- FROM cars
+-- WHERE color = 'black';
+-- 2. Create a view that shows all information about black cars and the addition of the weekly price as a column.
+-- CREATE VIEW bc_weekly_price AS
+-- SELECT
+-- 	car_number,
+--     brand,
+--     model,
+--     color,
+-- 	price_per_day*7 weekly_price
+-- FROM CARS
+-- WHERE color = 'black'
+-- 3. Try and insert a car into both views created. What happens? Why? What's the difference between the views?
+-- INSERT INTO black_cars(car_number, brand, model, color, price_per_day)
+-- VALUES (1337,"Elite","Pex","Black",123);
+-- INSERT INTO bc_weekly_price(car_number,brand,color,weekly_price)
+-- VALUES (99,"fastestcarEU","9000","red",555); -- Won't work because weekly_price is a computed column and can therefore not be inserted into.
+-- 4. Create a view that shows all the cars available for booking at this current time.
+-- CREATE VIEW available_cars AS
+-- SELECT
+-- 	c.car_number,
+--     c.brand,
+--     c.model,
+--     c.color,
+--     c.price_per_day
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number
+-- WHERE (b.start_date != '2021-04-23') AND (b.end_date <= '2021-04-23');
+-- 5. Alter the previous view, with the condition that the cars have to be available for at least 3 days of renting.
+-- ALTER VIEW available_cars
+-- AS  SELECT
+-- 	c.car_number,
+--     c.brand,
+--     c.model,
+--     c.color,
+--     c.price_per_day
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number
+-- WHERE
+-- 	((b.start_date != '2021-04-23') AND (b.end_date <= '2021-04-23'))
+--     AND
+--     (b.start_date - '2021-04-23') >= 3; -- Difference between todays date and the next booking.
+
+
+----------- DROP ----------------
+
+
+-- 1. Drop the table Cars.
+-- DROP TABLE cars;
+-- 2. Why didn't it work? Fix so that you can drop the table.
+-- It didn't work becuse there's a relation between cars and bookings. I.e, bookings has a foreign key to cars. First we have to remove it from the bookings table.
+-- ALTER TABLE bookings
+-- DROP FOREIGN KEY bookings_ibfk_2; -- Use the foreign key constraint name (i.e. not the name of the key in the table. Hint: you see it in the error code from task 1.)
+-- Then we drop the cars table.
+-- DROP TABLE cars;
+-- 3. Delete all the rows of table Customers.
+-- Before we delete we need to remove the foreign key constraints again.
+-- ALTER TABLE bookings
+-- DROP FOREIGN KEY bookings_ibfk_1;
+-- Now we can delete all rows:
+-- DELETE FROM customers;
+-- 4. What's the difference between DROP TABLE and DELETE?
+-- The difference is that DROP TABLE deletes the whole table, whereas DELETE only removes all data from the table.
