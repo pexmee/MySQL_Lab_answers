@@ -1,0 +1,183 @@
+ANSWERS LAB 1:
+Selection, projection, and restriction:
+
+-- 1. Show all customers with all their information.
+-- SELECT * FROM customers;
+-- 2. Show all customers, but only with their name and birthdate
+-- SELECT customer_name,birthdate FROM customers; 
+-- 3. Show all cars that cost more than 1000:- per day.
+-- SELECT * FROM cars
+-- 	WHERE price_per_day > 1000;
+-- 4. Show all Volvo cars, only with their brand name and their model.
+-- SELECT brand, model FROM cars WHERE brand = 'Volvo';
+-- 5. Show all customers, only with their names, in a sorted fashion based on their name. Both in ascending and descending order.
+-- SELECT 
+-- 	customer_name 
+-- FROM 
+-- 	customers
+-- ORDER BY
+-- 	customer_name ASC;
+-- 6. Show all customers, only with their names, that were born in 1990 or later in a sorted fashion based on their birthdate.
+-- SELECT
+-- 	customer_name
+-- FROM 
+-- 	customers
+-- WHERE 
+-- 	birthdate > '1990-01-01'
+-- ORDER BY
+-- 	birthdate ASC;
+-- 7. Show all cars that are red and cost less than 1500.
+-- SELECT *
+-- FROM cars
+-- WHERE color = 'RED' AND price_per_day < 1500;
+-- 8. Show all customers, only with their names, that were born between 1970-1990.
+-- SELECT customer_name
+-- FROM customers
+-- WHERE birthdate BETWEEN '1970-01-01' AND '1990-01-01';
+-- 9. Show all bookings that are longer than 6 days.
+-- SELECT *
+-- FROM bookings
+-- WHERE DATEDIFF(end_date,start_date) > 6;
+-- 10. Show all bookings that overlap with the interval 2018-02-01 - 2018-02-25.
+-- SELECT *
+-- FROM bookings
+-- WHERE (start_date BETWEEN '2018-02-01' AND '2018-02-25') OR (end_date BETWEEN '2018-02-02' AND '2018-02-25');
+-- 11. Show all customers whose first name starts with an O.
+-- SELECT *
+-- FROM customers
+-- WHERE customer_name LIKE 'O%';
+
+
+Aggregated Functions
+
+-- 1. Show the average price per day for the cars.
+-- SELECT AVG(price_per_day) FROM cars;
+-- 2. Show the total price per day for the cars.
+-- SELECT SUM(price_per_day) 'total price per day' FROM cars;
+-- 3. Show the average price for red cars.
+-- SELECT 
+--     color,
+--     AVG(price_per_day) average_ppd
+--     FROM cars
+--     WHERE color = "red"
+--     GROUP BY color
+-- 4. Show the total price for all cars grouped by the different colors
+-- SELECT 
+-- 	color,
+--     AVG(price_per_day) 'average ppd'
+--     FROM cars
+--     GROUP BY color;
+-- 5. Show how many cars are of red color.
+-- SELECT 
+-- 	color,
+--     COUNT(*) count
+--     FROM cars
+--     WHERE color = 'red';
+-- 6. Show how many cars exists of each color.
+-- SELECT
+-- 	color,
+--     count(*) count
+--     FROM cars
+--     GROUP BY color;
+-- 7. Show the car that is the most expensive to rent. (Do not hard code this with the most expensive price, instead use ORDER and LIMIT.)
+-- SELECT *
+-- FROM cars
+-- ORDER BY price_per_day DESC
+-- LIMIT 1;
+
+JOINS
+
+-- 1. Show the Cartesian product between Cars and Bookings.
+-- SELECT *
+-- FROM cars
+-- JOIN bookings;
+-- 2. Show the Cartesian product between Customers and Bookings.
+-- SELECT *
+-- FROM customers
+-- JOIN bookings;
+-- 3. Show the results of converting the previous two joins to inner joins.
+-- SELECT * 
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number;
+-- SELECT *
+-- FROM customers c
+-- JOIN bookings b
+-- ON c.customer_number = b.customer_number;
+-- 4. Show the names of all the customers that has made a booking.
+-- SELECT c.customer_name 
+-- FROM customers c
+-- JOIN bookings b
+-- ON b.customer_number = c.customer_number; 
+-- 5. Same as the previous but without all the duplicates.
+-- SELECT DISTINCT c.customer_name -- Distinct to remove all duplicates.
+-- FROM customers c
+-- JOIN bookings b
+-- ON b.customer_number = c.customer_number; 
+-- 6. Show all the Volkswagen cars that has been booked at least once.
+-- SELECT * 
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number
+-- WHERE brand = 'Volkswagen';
+-- 7. Show all the customers that has rented a Volkswagen.
+-- SELECT * 
+-- FROM customers c 
+-- JOIN bookings b
+-- ON c.customer_number = b.customer_number
+-- JOIN cars ca
+-- ON b.car_number = ca.car_number
+-- WHERE brand = 'Volkswagen';
+-- 8. Show all cars that has been booked at least once.
+-- SELECT DISTINCT -- Again, to remove duplicates.
+-- 	c.car_number, 
+--     c.brand, 
+--     c.model, 
+--     c.color, 
+--     c.price_per_day
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number;
+-- 9. Show all cars that has never been booked.
+-- SELECT DISTINCT -- Again, to remove duplicates.
+-- 	c.car_number, 
+--     c.brand, 
+--     c.model, 
+--     c.color, 
+--     c.price_per_day
+-- FROM cars c
+-- LEFT JOIN bookings b
+-- ON c.car_number = b.car_number
+-- WHERE b.car_number IS NULL;
+-- 10. Show all the black cars that has been booked at least once.
+-- SELECT DISTINCT
+-- 	c.car_number,
+--     c.brand,
+--     c.model,
+--     c.color,
+--     c.price_per_day
+-- FROM cars c
+-- JOIN bookings b
+-- ON c.car_number = b.car_number
+-- WHERE color = 'black';
+
+NESTED QUERIES
+
+-- 1. Show all the cars that cost more than the average.
+-- SELECT *
+-- FROM cars
+-- WHERE price_per_day > (SELECT AVG(price_per_day) average_price FROM cars);
+-- 2. Show the car with the lowest cost with black color.
+-- SELECT * 
+-- FROM cars
+-- WHERE price_per_day IN (SELECT price_per_day FROM cars WHERE color = 'black') -- This can totally be written without a nested query, but couldn't find another way to do it by nesting lol.
+-- ORDER BY price_per_day ASC LIMIT 1
+-- 3. Show the car which has the lowest cost.
+-- SELECT * 
+-- FROM cars
+-- WHERE price_per_day = (SELECT price_per_day FROM cars ORDER BY price_per_day ASC LIMIT 1); -- Can be written without a nested query, yet I don't know how to nest it less retardedly. Like, I could use the inner query and just get * instead and it'd do the same.
+-- 4. Show all the black cars that has been booked at least once by using a sub query
+-- SELECT *
+-- FROM bookings
+-- WHERE car_number IN (SELECT car_number FROM cars WHERE color = 'black'); -- Inner query, get's all car numbers. (5,8,12)
+
