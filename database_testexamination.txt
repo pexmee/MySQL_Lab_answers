@@ -1,0 +1,190 @@
+-- CREATE DATABASE testexamination;
+
+-- UPPGIFT 1
+-- PETER YLINIEMI DATABASLABORATION
+-- USE testexamination;
+
+-- CREATE TABLE IF NOT EXISTS item (
+-- 	itemNumber INT NOT NULL,
+--     name varchar(45) NOT NULL,
+--     startingPrice INT NOT NULL,
+--     lastBidDate DATE NOT NULL,
+--     acceptedBid INT,
+--     CONSTRAINT PRIMARY KEY (itemNumber)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS bidder (
+-- 	bidderNumber INT NOT NULL,
+--     name VARCHAR(45) NOT NULL,
+--     address VARCHAR(45) NOT NULL,
+--     credit INT NOT NULL,
+--     CONSTRAINT PRIMARY KEY (bidderNumber)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS bid (
+-- 	bidNumber INT NOT NULL,
+--     itemNumber INT NOT NULL,
+--     bidderNumber INT NOT NULL,
+--     bidDate DATE NOT NULL,
+--     bid INT NOT NULL,
+--     CONSTRAINT PRIMARY KEY (bidNumber),
+--     CONSTRAINT FOREIGN KEY (itemNumber) REFERENCES item(itemNumber),
+--     CONSTRAINT FOREIGN KEY (bidderNumber) REFERENCES bidder(bidderNumber)
+-- );
+
+-- INSERT INTO Item (itemNumber, name, startingPrice, lastBidDate, acceptedBid
+-- ) VALUES
+-- (0, 'Pryl 1', 50, '2019-06-30', null),
+--  (1, 'Pryl 2', 500, '2019-06-02', 800),
+--  (2, 'Pryl 3', 1000, '2019-05-30', 1100),
+--  (3, 'Pryl 4', 800, '2019-05-06', 800),
+--  (4, 'Pryl 5', 200, '2019-07-31', null);
+-- INSERT INTO Bidder (bidderNumber, name, address, credit) VALUES
+-- (0, 'Ada Asson', 'HemmaIHuset', 10000),
+--  (1, 'Beda Bsson', 'StuganVidVägen', 70000),
+--  (2, 'Ceasar Csson', 'Någonstans', 25000),
+--  (3, 'Dino Dsson', 'Where', 5000),
+--  (4, 'Eve Esson', 'Bråkmakaregatan', 200000),
+--  (5, 'Fabian Fsson', 'Here', 14000);
+-- INSERT INTO Bid (bidNumber, itemNumber, bidderNumber, bidDate, bid) VALUES
+-- (0, 0, 0, '2019-04-20', 50),
+--  (1, 0, 2, '2019-04-25', 70),
+--  (2, 1, 1, '2019-05-01', 500),
+--  (3, 1, 2, '2019-05-01', 600),
+--  (4, 1, 1, '2019-05-01', 700),
+--  (5, 2, 5, '2019-05-01', 1000),
+--  (6, 3, 3, '2018-05-02', 300),
+--  (7, 3, 2, '2018-05-03', 400),
+--  (8, 1, 3, '2018-05-06', 800),
+--  (9, 2, 4, '2018-05-22', 1100);
+
+
+-- 2. Skriv en SQL-sats som visar budgivarna och deras bud på alla prylar.
+-- Resultattabellen skall ha följande kolumner: budgivarens namn, prylens id,
+-- budets datum, och budet.
+
+-- SELECT 
+-- 	b.name,
+-- 	bi.itemNumber,
+--     bi.bidDate,
+--     bi.bid
+-- FROM bidder b
+-- JOIN bid bi
+-- ON b.bidderNumber = bi.bidderNumber; 
+
+-- Explanation: We extract the relevant columns by making an inner join with the bidder table and the bid table. 
+
+-- 3. Skriv en SQL-sats som visar antalet bud på på alla auktioner. Resultattabellen
+-- skall ha följande kolumner: prylens namn, och antalet bud.
+
+-- SELECT 
+-- 	b.itemNumber,
+--     COUNT(*) num_bids
+-- FROM bid b
+-- GROUP BY itemNumber;
+
+-- Explanation: We count the number of rows smashed together by the group by statement and label it as num_bids. 
+-- This is quite straightforward.
+
+
+-- 4. Skapa en vy som visar varje aktiv (tips: CURDATE()) budgivning med
+-- kolumnerna prylens nummer och nuvarande högsta bud.
+
+-- CREATE VIEW current_highest_bids AS
+-- SELECT 
+-- 	b.itemNumber,
+--     MAX(b.bid) highest_bid
+-- FROM bid b
+-- JOIN item i 
+-- ON b.itemNumber = i.itemNumber
+-- WHERE b.bidDate <= i.lastBidDate AND i.lastBidDate >= CURDATE();
+
+-- Explanation: The explanation is that we use the built in function MAX to calculate the highest bid.
+-- We show only the rows where the bidDate is less than the lastBidDate and if the lastBidDate is today or after today. Otherwise it wouldn't be active per definition.
+
+-- TEST the view created in assignment 4 with:
+-- SELECT * FROM current_highest_bids;
+
+-- 5. Anders har en girig syn på auktioner. Om någon lägger ett bud på en pryl på
+-- dess slutdatum, skall dess slutdatumet flyttas framåt en dag. Lös detta med
+-- hjälp av en trigger på tabellen Bid.
+
+-- DELIMITER //
+-- CREATE TRIGGER move_endDate BEFORE INSERT ON `bid`
+-- FOR EACH ROW
+-- BEGIN
+-- 	UPDATE item
+--     SET item.lastBidDate = DATE_ADD(item.lastBidDate,INTERVAL 1 DAY)
+--     WHERE item.lastBidDate = NEW.bidDate AND item.itemNumber = NEW.itemNumber;
+-- END; //
+-- DELIMITER ;
+
+-- Explanation: We create a trigger before the insert to avoid any update & accessing errors.
+-- We update the items table and add 1 day to the last bid date only if both the bid date matches the last bid date, and if the itemnumber matches.
+
+-- TEST for trigger made in 5 with:
+-- INSERT INTO bid(bidNumber,itemNumber,bidderNumber,bidDate,bid)
+-- VALUES (1234,0,1,"2019-06-30",1337);
+-- Row will be inserted in table bid, but the lastBidDate on item 0 in the 'item' table will be moved forward 1 day.
+-- The last date was "2019-06-30" and after trigger happened it is "2019-07-01".
+
+-- 6. Skapa en Funktion som beräknar företagets intäkt för respektive avslutad
+-- budgivning. Företaget tar 20% för avslutade auktioner under 1000kr och 10%
+-- för resterande.
+
+-- SET GLOBAL log_bin_trust_function_creators = 1;
+-- DELIMITER && 
+-- CREATE FUNCTION `bid_profit`(accepted_bid INT) RETURNS INT
+-- BEGIN
+-- 	DECLARE profit INT;
+--     IF accepted_bid < 1000
+--     THEN
+-- 		SET profit = accepted_bid*0.20;
+-- 	ELSE
+-- 		SET profit = accepted_bid*0.10;
+-- 	END IF;
+--     RETURN profit;
+-- END; &&
+-- DELIMITER ;
+
+-- Explanation: We set the global variable to enable 'unsafe' creation of functions. Otherwise we'd encounter an error while creating the function (duh!).
+-- The function accepts an integer as a parameter (which will be the acceptedBid from the item table), and returns a profit depending on what interval the input parameter was in.
+-- Keep in mind: to achieve a higher accuracy, we could've used a float/double instead of an int. Call me crazy but I feel that this is more appropriate.
+-- TEST FOR 6:
+-- SELECT 
+-- 	*,
+-- 	bid_profit(i.acceptedBid)
+-- FROM item i;
+
+-- 7. Skriv en SQL-sats som visar budgivarna, de prylar de har budat på, och buden
+-- de har gjort på respektive pryl. Om en budgivare inte lagt något bud skall
+-- denne ändå visas med i resultatet.
+
+-- SELECT 
+-- 	bi.name,
+-- 	inner_t.itemNumber,
+--     inner_t.name,
+--     inner_t.bid
+-- FROM bidder bi
+-- LEFT JOIN 
+-- (SELECT 
+-- 	b.bidderNumber,
+--     b.itemNumber,
+--     i.name,
+--     b.bid
+-- FROM bid b
+-- JOIN item i
+-- ON b.itemNumber = i.itemNumber) inner_t
+-- ON bi.bidderNumber = inner_t.bidderNumber;
+
+-- Explanation: Here we've used an inner subquery composed of an inner join of the item table and bid table.
+-- We've extracted the relevant columns to ensure duplicates are removed, otherwise we'd encounter errors with the outer query (while joining). 
+-- Note: we use a left join because we want to keep the results from the left table (the name of the bidder).
+
+-- Test on 7:
+-- INSERT INTO bidder(bidderNumber, name, address, credit)
+-- VALUES (1337,"Testar Testarsson","Testaregatan 59", 9999);
+-- Then run 7 and it will show the null values on the bids for the inserted bidder.
+
+
+
