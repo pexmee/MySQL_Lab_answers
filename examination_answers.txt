@@ -1,0 +1,205 @@
+-- PETER YLINIEMI DVADS19, studentacronym: peyl19
+
+-- 1. Skapa tabellerna ovan, sätt lämpliga primär- och främmande nycklar för tabellerna. Nedanstående data skall in i tabellerna.
+-- CREATE DATABASE IF NOT EXISTS labexamination;
+
+USE labexamination;
+-- SET GLOBAL log_bin_trust_function_creators = 1;
+
+-- CREATE TABLE IF NOT EXISTS craftsman(
+-- 	craftsmanNumber INT NOT NULL,
+--     name VARCHAR(45) NOT NULL,
+--     competence VARCHAR(45) NOT NULL,
+--     price INT NOT NULL,
+-- 	CONSTRAINT PRIMARY KEY (craftsmanNumber)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS customer(
+-- 	customerNumber INT NOT NULL,
+--     name VARCHAR(45) NOT NULL,
+--     address VARCHAR(45) NOT NULL,
+--     phoneNumber VARCHAR(45) NOT NULL,
+-- 	CONSTRAINT PRIMARY KEY (customerNumber)
+-- );
+
+-- CREATE TABLE IF NOT EXISTS job(
+-- 	jobNumber INT NOT NULL,
+--     craftsmanNumber INT NOT NULL,
+--     customerNumber INT NOT NULL,
+--     startDate DATE NOT NULL,
+--     time INT NOT NULL,
+-- 	CONSTRAINT PRIMARY KEY (jobNumber),
+-- 	CONSTRAINT FOREIGN KEY (customerNumber) REFERENCES customer(customerNumber),
+--     CONSTRAINT FOREIGN KEY (craftsmanNumber) REFERENCES craftsman(craftsmanNumber)
+-- );
+
+-- INSERT INTO Craftsman(craftsmanNumber, name, competence, price) VALUES
+--   (0, "Kalle Anka", "Målare", 540),
+--   (1, "Kajsa Kavat", "Snickare", 840),
+--   (2, "Ronja Rdotter", "Plåtslagare", 270),
+--   (3, "Pelle S", "Murare", 620),
+--   (4, "Knatte", "Murare", 670);
+--   
+-- INSERT INTO Customer (customerNumber, name, address, phoneNumber) VALUES
+--   (0, "Ada Asson", "HemmaIHuset", "070-12345"),
+--   (1, "Beda Bsson", "StuganVidVägen", "070-67890"),
+--   (2, "Ceasar Csson", "Någonstans", "070-13579"),
+--   (3, "Dino", "Where", "070-24680"),
+--   (4, "Eve Esson", "Here", "070-4044044"),
+--   (5, "Fabian Fsson", "Here", "070-1011011");
+--   
+-- INSERT INTO Job (jobNumber, craftsmanNumber, customerNumber, startDate, time) VALUES
+--   (0, 0, 0, "2017-10-10", 24),
+--   (1, 0, 2, "2017-12-12", 30),
+--   (2, 1, 0, "2017-12-10", 30),
+--   (3, 1, 1, "2017-12-12", 15),
+--   (4, 1, 2, "2018-05-20", 15),
+--   (5, 1, 3, "2018-03-03", 24),
+--   (6, 2, 0, "2018-04-20", 18),
+--   (7, 2, 1, "2018-05-05", 9),
+--   (8, 3, 0, "2018-06-05", 6),
+--   (9, 3, 1, "2018-06-06", 6);
+
+-- Explanation (1): We create a database for this assignment, and create the required tables. I chose to set all columns to NOT NULL because I didn't see any values with null in them, so I made a qualified guess.
+-- The primary keys were set because they are unique. The primary keys were set with the condition that they will reference the other tables using the referenced tables primary keys, again, because they're unique. 
+
+-- 2. Skriv en SQL-sats som visar hantverkarna och deras utförda arbeten. 
+-- Resultattabellen ska visa följande kolumner: hantverkarens namn, hantverkarens yrke, startdatum för arbetet, och lagd tid på arbetet.
+
+-- SELECT 
+-- 	c.name,
+--     c.competence,
+--     j.startDate,
+--     j.time
+-- FROM job j
+-- JOIN craftsman c
+-- ON j.craftsmanNumber = c.craftsmanNumber;
+
+-- Explanation (2):
+-- We make an inner join between the job table and the craftsman table on the craftsmanNumber as the condition, because it is the foreign key in the job table and the primary key in the craftsman table. 
+-- Then we select the sought after columns from each table, presenting the required result as per the assignment.
+
+
+-- 3. Skriv en SQL-sats som visar varje kund och deras totala inköpta arbetstid. 
+-- Resultattabellen skall visa följande kolumner: kundens namn, telefonnummer, och totala inköpta arbetstid.
+
+-- SELECT 
+-- 	c.name,
+--     c.phoneNumber,
+--     SUM(j.time) total_time_purchased
+-- FROM job j
+-- JOIN customer c
+-- ON j.customerNumber = c.customerNumber
+-- GROUP BY j.customerNumber;
+
+-- Explanation (3):
+-- We make an inner join between the job table and the customer table with the customerNumber as the condition we group the result by the customer number because we want to smash the jobtimes together. Then we
+-- sum the result of said smash and present it as total_time_purchased, as per the assignment. 
+
+-- 4. Skapa en vy som visar hur mycket en hantverkare tjänat totalt på sina olika jobb fram tills 2018-05-07 
+-- med kolumnerna hantverkarens namn, och total inkomst.
+
+-- CREATE VIEW total_income AS
+-- SELECT 
+-- 	c.name,
+--     SUM(j.time*c.price) total_income 
+-- FROM job j
+-- JOIN craftsman c
+-- ON j.craftsmanNumber = c.craftsmanNumber
+-- WHERE j.startDate <= "2018-05-07"
+-- GROUP BY c.craftsmanNumber;
+
+-- TEST 4:
+-- SELECT * from total_income;
+
+-- EXPLANATION (4):
+-- We create a view that makes an inner join between the job and craftsman table, using the craftsmanNumber as the join condition (because it is the foreign key in the job table and primary in the craftsman table).
+-- Then we present the rows only where the startDate is less than 2018-05-07 as per the assignment, grouping the result by the craftsmanNumber. 
+-- To present the required columns, we calculate the SUM by multiplying the total job time with the price per hour of the craftsman. This can easily be verified with a calculator (I leave it to the reader, sorry but no time) 
+
+-- 5. Skapa en trigger på tabellen Job som, när man gör en bokning, 
+-- kollar om det nya jobbet är bokat på mindre än 2 timmar. 
+-- Vi alla vet att det minst tar 2 timmar att göra valfritt arbete, så om den nya bokningen är mindre än 2 timmar, ändra den till 2.
+
+-- DELIMITER //
+-- CREATE TRIGGER check_booking BEFORE INSERT ON job
+-- FOR EACH ROW
+-- BEGIN
+-- 	IF NEW.time < 2
+-- 	THEN
+-- 		SET NEW.time = 2;
+--     END IF;
+-- END; //
+-- DELIMITER ;
+
+-- Explanation (5): We create a trigger for the job table that checks if the new time is less than 2, and if it is, it will set the new time to 2 before inserting it into the table.
+-- We use delimiters here to avoid any errors caused by the DBMS not understanding where the trigger ends.
+-- Test the code with the below code segment: 
+
+-- TEST (5):
+-- INSERT INTO job(jobNumber,craftsmanNumber,customerNumber,startDate,time)
+-- VALUES (1337,0,0,"2021-05-14",1);
+
+
+
+-- 6. Skapa en procedur som hanterar bokningen av ett arbete.
+-- Två arbeten för samma hantverkare kan inte påbörjas samma dag, en kontroll för detta måste ske i proceduren.
+
+-- DELIMITER //
+-- CREATE PROCEDURE booking_handler (
+-- 	IN INjobnumber INT, 
+--     IN INcraftsmanNumber INT, 
+--     IN INcustomerNumber INT,
+--     IN INstartDate DATE,
+--     IN INtime INT
+-- )
+-- BEGIN
+-- 	IF NOT EXISTS (SELECT * FROM job j WHERE j.startDate = INstartDate AND j.jobNumber = INjobnumber) THEN
+-- 	
+-- 		INSERT INTO job(jobNumber,craftsmanNumber,customerNumber,startDate,time)
+-- 		VALUES (INjobnumber,INcraftsmanNumber,INcustomerNumber,INstartDate,INtime);
+--     END IF;
+-- END; //
+-- DELIMITER ;
+
+-- Explanation (6): We have created a procedure that works as a handler for bookings. 
+-- It checks if there's a booking on the INjobnumbr in the job table, and if there is it checks if the start dates are the same. If they are, it discards the booking,
+-- Otherwise it inserts the booking into the job table. Test it with the code below:
+
+-- Test for booking handler in 6 with:
+-- CALL booking_handler(0,0,0,"2017-10-10",24); NOTHING WILL HAPPEN because it doesn't allow a booking on the same date
+-- CALL booking_handler(0,0,0,"2020-01-01",5); Will work because there's no existing booking at this date for this job.
+
+
+-- 7. Skriv en SQL-sats som visar varje hantverkare, varje jobb hantverkarna gjort, och vilken kund varje jobb gjorts för.
+-- Om en hantverkare inte jobbat, skall denne ändå visas i resultatet.
+
+-- SELECT 
+-- 	cr.name craftsmanName,
+--     inner_t.jobNumber jobNumber,
+--     inner_t.startDate Job_start_date,
+--     inner_t.time job_time,
+--     inner_t.customerNumber customerNumber,
+--     inner_t.name customerName
+-- FROM craftsman cr
+-- LEFT JOIN
+-- (SELECT
+-- 	j.jobNumber,
+--     j.startDate,
+--     j.time,
+--     j.craftsmanNumber,
+--     c.customerNumber,
+--     c.name
+-- FROM job j
+-- JOIN customer c
+-- ON j.customerNumber = c.customerNumber) inner_t
+-- ON inner_t.craftsmanNumber = cr.craftsmanNumber;
+
+-- Explanation (7): In the inner query we use an inner join between the tables job and customer. We extract only the necessary columns from both tables to avoid duplicates and error in the outer query.
+-- In the outer query, we make a left join with the inner query to keep the results in the left table (craftsman table) - this is because we want to be able to see craftsmen even if they haven't done a job.
+-- Then we extract the columns I deem necessary from both the inner join table (labled inner_t) and the craftsman table. The subquery has been joined on the customer number because of how the keys are set up, 
+-- and the same goes for the craftsmanNumber. This is because craftsmanNumber is the foreign key in the job table, and the customerNumber is the foreign key in the job table as well. 
+-- To make sure it works, just run the query and observe that craftsmanName 'Knatte' has all values set to NULL except for his name.
+
+
+
